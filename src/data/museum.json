@@ -45,9 +45,39 @@
               "slug": "solidgeo",
               "title": "SolidGeo",
               "year": "1997",
-              "summary": "",
-              "body": "",
+              "summary": "SolidGeo software",
+              "body": "SolidGeo was the first sodtware I created. It showed the subsurface in 3D.",
               "image": "/media/1-muns4pwn.jpeg",
+              "links": [],
+              "tags": []
+            },
+            {
+              "slug": "sgi-indy-workstation",
+              "title": "SGI Indy Workstation",
+              "year": "1994",
+              "summary": "Silicon Graphics Indy Workstation",
+              "body": "The Indy, code-named \"Guinness\", is a low-end multimedia workstation introduced on July 12, 1993 by Silicon Graphics Incorporated (SGI). SGI developed, manufactured, and marketed Indy as the lowest end of its product line, for computer-aided design (CAD), desktop publishing, and multimedia markets. It competed with Intel x86 computers,[2] and with Windows and Macintosh,[1][3] including using their files and running their applications via software emulation.[4] It is the first computer to come standard with a video camera, called IndyCam.[5]\n\nIndy was repackaged as a server model (no video and audio support) called Challenge S [6]. Indy was discontinued on June 30, 1997, and support ended on December 31, 2011.[7]",
+              "image": "/media/silicon-graphics-indy-munt8rqb.jpg",
+              "links": [],
+              "tags": []
+            },
+            {
+              "slug": "sgi-o2-workstation",
+              "title": "SGI O2 Workstation",
+              "year": "1996",
+              "summary": "Silicon Graphics O2 Workstation",
+              "body": "The O2 is an entry-level Unix workstation introduced in 1996 by Silicon Graphics, Inc. (SGI) to replace their earlier Indy series. Like the Indy, the O2 uses a single MIPS microprocessor and was intended to be used mainly for multimedia. Its larger counterpart is the SGI Octane. The O2 was SGI's last attempt at a low-end workstation.",
+              "image": "/media/sgi-o2-img-7208-muntd9dn.jpg",
+              "links": [],
+              "tags": []
+            },
+            {
+              "slug": "gocad",
+              "title": "GOCAD",
+              "year": "1996",
+              "summary": "GOCAD® Mining Suite 3D geological modelling software",
+              "body": "GOCAD was an interesting geological software suite, I visited their seminar in 1996 in Nancy France and got friends with professor Jean-Laurent Mallet, the author of GOCAD. In 2006, much after I left, Paradigm acquired GOCAD, and Prof. Mallet contacted me saying \"who would have believed\" etc.",
+              "image": "/media/gocad-muntkd0g.jpg",
               "links": [],
               "tags": []
             }
