@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { wings } from '../../data/museum';
+import { bg, plural, roomCover, wings } from '../../data/museum';
 
 export function getStaticPaths() {
   return wings.map((wing) => ({ params: { wing: wing.slug }, props: { wing } }));
@@ -8,18 +8,26 @@ export function getStaticPaths() {
 const { wing } = Astro.props;
 ---
 
-<Base title={`${wing.title} — Museum`}>
-  <p class="crumbs"><a href="/">Wings</a> / {wing.title}</p>
-  <h1>{wing.title}</h1>
-  <p>{wing.description}</p>
-  <ul class="cards">
+<Base title={`${wing.title} — Museum`} description={wing.description || undefined}>
+  <nav class="crumbs"><a href="/">Museum</a><i>/</i><span>{wing.title}</span></nav>
+  <div class="intro">
+    <div class="eyebrow">Wing</div>
+    <h1>{wing.title}</h1>
+    {wing.description && <p>{wing.description}</p>}
+  </div>
+  {wing.rooms.length === 0 && <p class="empty">No rooms in this wing yet.</p>}
+  <div class="grid">
     {
       wing.rooms.map((r) => (
-        <li>
-          <a href={`/${wing.slug}/${r.slug}/`}>{r.title}</a> <small>{r.items.length} items</small>
-          <div>{r.description}</div>
-        </li>
+        <a class="card" href={`/${wing.slug}/${r.slug}/`}>
+          <div class="bg" style={`background:${bg(roomCover(r), r.slug)}`} />
+          <div class="body">
+            <h3>{r.title}</h3>
+            <div class="meta">{plural(r.items.length, 'item')}</div>
+            {r.description && <div class="desc">{r.description}</div>}
+          </div>
+        </a>
       ))
     }
-  </ul>
+  </div>
 </Base>

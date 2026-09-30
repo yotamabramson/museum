@@ -1,9 +1,10 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Environment, Lightformer, Text } from '@react-three/drei';
+import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { wings } from '../data/museum';
-import { ROOM_W, SPINE_HALF_D, WALL_H, WALL_T, buildLayout, type MuseumLayout, type PlacedRoom, type Placement } from '../lib/layout';
+import { DOOR_H, DOOR_W, ROOM_W, SPINE_HALF_D, WALL_H, WALL_T, buildLayout, type MuseumLayout, type PlacedRoom, type Placement } from '../lib/layout';
 import './Museum3D.css';
 
 const EYE = 1.65;
@@ -24,6 +25,68 @@ type Registry = Set<THREE.Object3D>;
 const idOf = (p: Placement) => `${p.wing.slug}/${p.room.slug}/${p.item.slug}`;
 const hueOf = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7) / 360;
 
+// ── Look & feel ──────────────────────────────────────────────────────────────
+
+const FONT_SERIF = '/fonts/cormorant-garamond-latin-600-normal.woff';
+const FONT_SANS = '/fonts/inter-latin-400-normal.woff';
+const GOLD = '#c9a55c';
+// Deep gallery wall colours, one per wing (cycling).
+const PALETTE = ['#34504f', '#5e2f37', '#31446a', '#465331', '#54405f', '#634b33', '#2a5240', '#603f2e'];
+const wallColor = (col: number) => new THREE.Color(col < 0 ? '#3d3833' : PALETTE[col % PALETTE.length]);
+
+let woodTex: THREE.Texture | null = null;
+function wood() {
+  if (woodTex) return woodTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 512;
+  const g = c.getContext('2d')!;
+  const planks = 8, pw = 512 / planks;
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < planks; i++) {
+    let y = 0;
+    while (y < 512) {
+      const len = Math.min(512 - y, 120 + rnd() * 260);
+      g.fillStyle = `hsl(${22 + rnd() * 8} ${34 + rnd() * 12}% ${24 + rnd() * 8}%)`;
+      g.fillRect(i * pw, y, pw, len);
+      for (let k = 0; k < 16; k++) {
+        g.strokeStyle = `rgba(${rnd() > 0.5 ? '0,0,0' : '255,220,170'},${0.03 + rnd() * 0.06})`;
+        g.lineWidth = 0.6 + rnd();
+        const x = i * pw + rnd() * pw;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.bezierCurveTo(x + (rnd() - 0.5) * 8, y + len / 3, x + (rnd() - 0.5) * 8, y + (2 * len) / 3, x + (rnd() - 0.5) * 5, y + len);
+        g.stroke();
+      }
+      y += len;
+      g.fillStyle = 'rgba(0,0,0,0.5)';
+      g.fillRect(i * pw, y - 1.5, pw, 1.5);
+    }
+    g.fillStyle = 'rgba(0,0,0,0.55)';
+    g.fillRect(i * pw, 0, 2, 512);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return (woodTex = t);
+}
+
+let glowTex: THREE.Texture | null = null;
+function glow() {
+  if (glowTex) return glowTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.35, 'rgba(255,255,255,0.4)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  return (glowTex = new THREE.CanvasTexture(c));
+}
+
 // ── Static shell ─────────────────────────────────────────────────────────────
 
 interface Box {
@@ -31,7 +94,7 @@ interface Box {
   color?: THREE.Color;
 }
 
-function Boxes({ boxes, color, roughness = 0.9 }: { boxes: Box[]; color: string; roughness?: number }) {
+function Boxes({ boxes, children }: { boxes: Box[]; children: React.ReactNode }) {
   const ref = useRef<THREE.InstancedMesh>(null!);
   useLayoutEffect(() => {
     const m = ref.current;
@@ -45,39 +108,93 @@ function Boxes({ boxes, color, roughness = 0.9 }: { boxes: Box[]; color: string;
     });
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
-    m.computeBoundingSphere();
   }, [boxes]);
   if (!boxes.length) return null;
   return (
     <instancedMesh ref={ref} args={[undefined, undefined, boxes.length]} frustumCulled={false}>
       <boxGeometry />
-      <meshStandardMaterial color={color} roughness={roughness} />
+      {children}
     </instancedMesh>
   );
 }
 
-function Shell({ layout }: { layout: MuseumLayout }) {
-  const { walls, rooms, spine } = layout;
-  const wallBoxes = useMemo(() => walls.map((w) => ({ x: w.x, y: WALL_H / 2, z: w.z, w: w.w, h: WALL_H, d: w.d })), [walls]);
-  const floors = useMemo(() => {
-    const spineW = spine.x1 - spine.x0;
-    const list: Box[] = [
-      { x: (spine.x0 + spine.x1) / 2, y: -0.05, z: 0, w: spineW + 2 * WALL_T, h: 0.1, d: SPINE_HALF_D * 2 + 2 * WALL_T, color: new THREE.Color('#6b6055') },
-    ];
-    for (const r of rooms) {
-      list.push({ x: r.cx, y: -0.05, z: r.cz, w: ROOM_W + 2 * WALL_T, h: 0.1, d: r.len + 2 * WALL_T, color: new THREE.Color().setHSL(hueOf(r.wing.slug), 0.18, 0.33) });
+interface Rect { x0: number; x1: number; z0: number; z1: number; color?: THREE.Color }
+
+/** One merged horizontal surface from many rectangles; UVs are in world units so textures tile evenly. */
+function surface(rects: Rect[], y: number, up: boolean, tile = 2) {
+  const pos: number[] = [], uv: number[] = [], nor: number[] = [], col: number[] = [], idx: number[] = [];
+  rects.forEach((r, i) => {
+    const b = i * 4;
+    pos.push(r.x0, y, r.z0, r.x1, y, r.z0, r.x1, y, r.z1, r.x0, y, r.z1);
+    uv.push(r.x0 / tile, r.z0 / tile, r.x1 / tile, r.z0 / tile, r.x1 / tile, r.z1 / tile, r.x0 / tile, r.z1 / tile);
+    for (let k = 0; k < 4; k++) {
+      nor.push(0, up ? 1 : -1, 0);
+      col.push(r.color?.r ?? 1, r.color?.g ?? 1, r.color?.b ?? 1);
     }
-    return list;
-  }, [rooms, spine]);
-  const ceilings = useMemo(
-    () => floors.map((f) => ({ ...f, y: WALL_H + 0.05, color: undefined })),
-    [floors],
+    idx.push(...(up ? [b, b + 3, b + 2, b, b + 2, b + 1] : [b, b + 2, b + 3, b, b + 1, b + 2]));
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  return geo;
+}
+
+function Shell({ layout }: { layout: MuseumLayout }) {
+  const { walls, lintels, lights, rooms, spine } = layout;
+
+  const wallBoxes = useMemo<Box[]>(
+    () => [
+      ...walls.map((w) => ({ x: w.x, y: WALL_H / 2, z: w.z, w: w.w, h: WALL_H, d: w.d, color: wallColor(w.col) })),
+      ...lintels.map((l) => ({
+        x: l.x, y: DOOR_H + (WALL_H - DOOR_H) / 2, z: l.z, w: DOOR_W + 0.04, h: WALL_H - DOOR_H, d: WALL_T,
+        color: wallColor(l.col),
+      })),
+    ],
+    [walls, lintels],
   );
+  const baseboards = useMemo<Box[]>(() => walls.map((w) => ({ x: w.x, y: 0.1, z: w.z, w: w.w + 0.08, h: 0.2, d: w.d + 0.08 })), [walls]);
+  const crown = useMemo<Box[]>(() => walls.map((w) => ({ x: w.x, y: WALL_H - 0.07, z: w.z, w: w.w + 0.1, h: 0.14, d: w.d + 0.1 })), [walls]);
+  const trim = useMemo<Box[]>(
+    () =>
+      lintels.flatMap((l) => [
+        { x: l.x, y: DOOR_H - 0.03, z: l.z, w: DOOR_W + 0.1, h: 0.07, d: WALL_T + 0.06 },
+        { x: l.x - DOOR_W / 2, y: DOOR_H / 2, z: l.z, w: 0.07, h: DOOR_H, d: WALL_T + 0.06 },
+        { x: l.x + DOOR_W / 2, y: DOOR_H / 2, z: l.z, w: 0.07, h: DOOR_H, d: WALL_T + 0.06 },
+      ]),
+    [lintels],
+  );
+  const strips = useMemo<Box[]>(
+    () => lights.map((l) => ({ x: l.x, y: WALL_H - 0.02, z: l.z, w: l.alongZ ? 0.2 : 2.4, h: 0.03, d: l.alongZ ? 2.4 : 0.2 })),
+    [lights],
+  );
+
+  const { floor, ceiling } = useMemo(() => {
+    const rects: Rect[] = [
+      { x0: spine.x0 - WALL_T, x1: spine.x1 + WALL_T, z0: -SPINE_HALF_D - WALL_T, z1: SPINE_HALF_D + WALL_T, color: new THREE.Color('#9b8a78') },
+      ...rooms.map((r) => ({
+        x0: r.cx - ROOM_W / 2 - WALL_T, x1: r.cx + ROOM_W / 2 + WALL_T, z0: r.zEnd - WALL_T, z1: r.zStart,
+        color: new THREE.Color('#ffffff').lerp(wallColor(layout.wings.findIndex((w) => w.wing === r.wing)), 0.25),
+      })),
+    ];
+    return { floor: surface(rects, 0, true), ceiling: surface(rects, WALL_H, false) };
+  }, [rooms, spine, layout.wings]);
+
   return (
     <>
-      <Boxes boxes={wallBoxes} color="#d8d0c4" />
-      <Boxes boxes={floors} color="#ffffff" roughness={0.6} />
-      <Boxes boxes={ceilings} color="#f2efe9" />
+      <Boxes boxes={wallBoxes}><meshStandardMaterial color="#ffffff" roughness={0.92} /></Boxes>
+      <Boxes boxes={baseboards}><meshStandardMaterial color="#14110e" roughness={0.6} /></Boxes>
+      <Boxes boxes={crown}><meshStandardMaterial color="#8f7a4e" roughness={0.5} metalness={0.4} /></Boxes>
+      <Boxes boxes={trim}><meshStandardMaterial color={GOLD} roughness={0.35} metalness={0.85} /></Boxes>
+      <Boxes boxes={strips}><meshBasicMaterial color={new THREE.Color('#fff0d0').multiplyScalar(3)} toneMapped={false} /></Boxes>
+      <mesh geometry={floor}>
+        <meshStandardMaterial map={wood()} vertexColors roughness={0.42} metalness={0.05} envMapIntensity={0.6} />
+      </mesh>
+      <mesh geometry={ceiling}>
+        <meshStandardMaterial color="#4a433c" roughness={1} />
+      </mesh>
     </>
   );
 }
@@ -93,7 +210,7 @@ function Frame({ p, registry }: { p: Placement; registry: Registry }) {
     new THREE.TextureLoader().load(p.item.image, (t) => {
       if (dead) return t.dispose();
       t.colorSpace = THREE.SRGBColorSpace;
-      t.anisotropy = 4;
+      t.anisotropy = 8;
       loaded = t;
       setTex(t);
     });
@@ -106,11 +223,24 @@ function Frame({ p, registry }: { p: Placement; registry: Registry }) {
 
   const img = tex?.image as { width: number; height: number } | undefined;
   const aspect = img ? img.width / img.height : 4 / 3;
-  const iw = aspect >= 1.3 ? 1.9 : 1.9 * (aspect / 1.3);
+  // Fit the artwork inside a 2.3 × 1.7 box.
+  const iw = Math.min(2.3, 1.7 * aspect);
   const ih = iw / aspect;
   const hue = hueOf(p.item.slug);
+  const glowMap = glow();
+  const plateY = -(ih / 2 + 0.18 + 0.46);
   return (
     <group position={[p.x, p.y, p.z]} rotation={[0, p.rotY, 0]}>
+      {/* pool of light on the wall, and a soft shadow under the frame */}
+      <mesh position={[0, 0.2, 0.006]} renderOrder={1}>
+        <planeGeometry args={[iw + 2.6, ih + 2.4]} />
+        <meshBasicMaterial map={glowMap} color="#ffd6a0" transparent opacity={0.26} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <mesh position={[0.06, -0.08, 0.012]} renderOrder={2}>
+        <planeGeometry args={[iw + 0.9, ih + 0.9]} />
+        <meshBasicMaterial map={glowMap} color="#000000" transparent opacity={0.6} depthWrite={false} />
+      </mesh>
+      {/* gilded frame → cream mat → artwork */}
       <mesh
         ref={(m) => {
           if (!m) return;
@@ -118,32 +248,41 @@ function Frame({ p, registry }: { p: Placement; registry: Registry }) {
           registry.add(m);
           return () => void registry.delete(m);
         }}
-        position={[0, 0, 0.03]}
+        position={[0, 0, 0.04]}
       >
-        <boxGeometry args={[Math.max(iw, 1.2) + 0.2, Math.max(ih, 1.2) + 0.2, 0.06]} />
-        <meshStandardMaterial color="#1b1712" roughness={0.6} />
+        <boxGeometry args={[iw + 0.4, ih + 0.4, 0.08]} />
+        <meshStandardMaterial color={GOLD} roughness={0.42} metalness={0.6} />
+      </mesh>
+      <mesh position={[0, 0, 0.05]}>
+        <boxGeometry args={[iw + 0.18, ih + 0.18, 0.08]} />
+        <meshStandardMaterial color="#efe9dd" roughness={0.95} />
       </mesh>
       {tex ? (
-        <mesh position={[0, 0, 0.065]}>
+        <mesh position={[0, 0, 0.092]}>
           <planeGeometry args={[iw, ih]} />
           <meshBasicMaterial map={tex} toneMapped={false} />
         </mesh>
       ) : (
         <>
-          <mesh position={[0, 0, 0.065]}>
-            <planeGeometry args={[1.9, 1.4]} />
-            <meshStandardMaterial color={new THREE.Color().setHSL(hue, 0.35, 0.3)} />
+          <mesh position={[0, 0, 0.092]}>
+            <planeGeometry args={[iw, ih]} />
+            <meshStandardMaterial color={new THREE.Color().setHSL(hue, 0.3, 0.3)} roughness={0.9} />
           </mesh>
-          <Text position={[0, 0, 0.08]} fontSize={0.16} maxWidth={1.6} textAlign="center" anchorX="center" anchorY="middle" color="#f3ead8">
+          <Text font={FONT_SERIF} position={[0, 0, 0.1]} fontSize={0.2} maxWidth={iw - 0.3} textAlign="center" anchorX="center" anchorY="middle" color="#f3ead8">
             {p.item.title}
           </Text>
         </>
       )}
-      <Text position={[0, -1.02, 0.03]} fontSize={0.12} maxWidth={2.4} textAlign="center" anchorX="center" anchorY="top" color="#2b2620">
+      {/* museum label */}
+      <mesh position={[0, plateY, 0.015]}>
+        <boxGeometry args={[1.9, 0.5, 0.03]} />
+        <meshStandardMaterial color="#e9e2d3" roughness={0.8} />
+      </mesh>
+      <Text font={FONT_SERIF} position={[0, plateY + 0.1, 0.035]} fontSize={0.135} maxWidth={1.75} textAlign="center" anchorX="center" anchorY="middle" color="#1c1813">
         {p.item.title}
       </Text>
       {p.item.year && (
-        <Text position={[0, -1.24, 0.03]} fontSize={0.09} anchorX="center" anchorY="top" color="#6b6459">
+        <Text font={FONT_SANS} position={[0, plateY - 0.1, 0.035]} fontSize={0.07} letterSpacing={0.12} anchorX="center" anchorY="middle" color="#7a6d55">
           {p.item.year}
         </Text>
       )}
@@ -162,7 +301,10 @@ function RoomView({ r, pos, registry }: { r: PlacedRoom; pos: React.RefObject<{ 
   if (!near) return null;
   return (
     <>
-      <Text position={[r.cx, 3.15, r.zEnd + 0.02]} fontSize={0.34} maxWidth={ROOM_W - 1} textAlign="center" anchorX="center" anchorY="middle" color="#3a342c">
+      <Text font={FONT_SANS} position={[r.cx, 3.72, r.zEnd + 0.03]} fontSize={0.1} letterSpacing={0.3} anchorX="center" anchorY="middle" color={GOLD}>
+        {r.wing.title.toUpperCase()}
+      </Text>
+      <Text font={FONT_SERIF} position={[r.cx, 3.42, r.zEnd + 0.03]} fontSize={0.34} maxWidth={ROOM_W - 1} textAlign="center" anchorX="center" anchorY="middle" color="#f1e9d8">
         {r.room.title}
       </Text>
       {r.placements.map((p) => (
@@ -189,6 +331,7 @@ function Player({
   const { camera } = useThree();
   const ray = useMemo(() => new THREE.Raycaster(undefined, undefined, 0, REACH), []);
   const t = useRef({ where: '', hover: '', acc: 0 });
+  const lantern = useRef<THREE.PointLight>(null!);
   useLayoutEffect(() => {
     pos.current.x = start.x;
     pos.current.z = start.z;
@@ -231,6 +374,7 @@ function Player({
       }
     }
     camera.position.set(p.x, EYE, p.z);
+    lantern.current.position.set(p.x, 3.4, p.z);
     camera.rotation.set(inp.pitch, inp.yaw, 0, 'YXZ');
 
     // Slow work: where am I, what am I looking at.
@@ -252,7 +396,7 @@ function Player({
       onHover(placement);
     }
   });
-  return null;
+  return <pointLight ref={lantern} color="#ffd9a8" intensity={7} distance={14} decay={2} />;
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -342,59 +486,82 @@ export default function Museum3D() {
 
   return (
     <div className="m3d" ref={root}>
-      <Canvas camera={{ fov: 70, near: 0.1, far: 80, position: [start.x, EYE, start.z] }} dpr={[1, 2]}>
-        <color attach="background" args={['#0b0a0d']} />
-        <fog attach="fog" args={['#0b0a0d', 25, 75]} />
-        <ambientLight intensity={1.1} />
-        <hemisphereLight args={['#fff4e0', '#3a3026', 0.9]} />
-        <directionalLight position={[3, 10, 4]} intensity={0.6} />
+      <Canvas camera={{ fov: 68, near: 0.1, far: 80, position: [start.x, EYE, start.z] }} dpr={[1, 2]} gl={{ antialias: false }}>
+        <color attach="background" args={['#0a0807']} />
+        <fog attach="fog" args={['#0a0807', 16, 62]} />
+        <ambientLight intensity={0.5} color="#ffe8cc" />
+        <hemisphereLight args={['#ffe9c8', '#3a2c20', 0.65]} />
+        <Environment resolution={64} environmentIntensity={0.55}>
+          <Lightformer form="rect" intensity={2.2} color="#ffe2b8" position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[14, 14, 1]} />
+          <Lightformer form="rect" intensity={1} color="#ffcf9a" position={[-6, 2, 0]} rotation-y={Math.PI / 2} scale={[8, 4, 1]} />
+          <Lightformer form="rect" intensity={1} color="#ffcf9a" position={[6, 2, 0]} rotation-y={-Math.PI / 2} scale={[8, 4, 1]} />
+        </Environment>
         <Shell layout={layout} />
-        {layout.wings.map((w) => (
-          <Text key={w.wing.slug} position={[w.cx, 3, -SPINE_HALF_D + 0.02]} fontSize={0.5} maxWidth={ROOM_W} textAlign="center" anchorX="center" anchorY="middle" color="#3a342c">
-            {w.wing.title}
-          </Text>
+        {layout.wings.map((w, col) => (
+          <group key={w.wing.slug} position={[w.cx, 3.5, -SPINE_HALF_D + 0.03]}>
+            <Text font={FONT_SANS} position={[0, 0.3, 0]} fontSize={0.1} letterSpacing={0.34} anchorX="center" anchorY="middle" color={GOLD}>
+              WING {String(col + 1).padStart(2, '0')}
+            </Text>
+            <Text font={FONT_SERIF} position={[0, -0.02, 0]} fontSize={0.44} maxWidth={DOOR_W + 1.5} textAlign="center" anchorX="center" anchorY="middle" color="#f6efe0">
+              {w.wing.title}
+            </Text>
+          </group>
         ))}
         {layout.rooms.map((r) => (
           <RoomView key={`${r.wing.slug}/${r.room.slug}`} r={r} pos={pos} registry={registry} />
         ))}
         <Player layout={layout} input={input} pos={pos} registry={registry} start={start} paused={paused} onWhere={setWhere} onHover={onHover} />
+        <EffectComposer multisampling={4}>
+          <Bloom intensity={0.7} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
+          <Vignette offset={0.3} darkness={0.65} />
+        </EffectComposer>
       </Canvas>
 
       <div className="where">{where}</div>
-      <div className="top-right"><a href="/">2D view</a></div>
+      <a className="back" href="/" data-astro-reload>← 2D view</a>
       {(locked || touch) && !open && <div className="cross" />}
 
       {hover && !open && (
         <button className="hint" onClick={inspect}>
-          {touch ? 'View' : <><kbd>E</kbd> / click</>} — {hover.item.title}
+          {touch ? 'View' : <kbd>E</kbd>}
+          <span>{hover.item.title}</span>
         </button>
       )}
 
       {!started && !open && (
         <div className="overlay" onClick={enter}>
-          <div>
-            <h1>Museum of Things I Made</h1>
-            <p>{touch ? 'Left thumb walks, right thumb looks.' : <><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · mouse looks · <kbd>Shift</kbd> runs · <kbd>E</kbd> or click inspects · <kbd>Esc</kbd> releases the mouse</>}</p>
+          <div className="intro">
+            <div className="eyebrow">A private collection</div>
+            <h1>Museum of <em>Things</em> I Made</h1>
             {wings.length === 0 && <p>The museum is empty — add exhibits with <code>npm run admin</code>.</p>}
-            <p><strong>{touch ? 'Tap' : 'Click'} to enter</strong></p>
+            <button className="enter">{touch ? 'Tap to enter' : 'Click to enter'}</button>
+            <p className="keys">
+              {touch ? 'Left thumb walks · right thumb looks' : <><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · mouse looks · <kbd>Shift</kbd> runs · <kbd>E</kbd> or click inspects · <kbd>Esc</kbd> frees the mouse</>}
+            </p>
           </div>
         </div>
       )}
       {started && !locked && !touch && !open && (
-        <div className="overlay" onClick={enter}><div><p><strong>Click to continue</strong></p></div></div>
+        <div className="overlay" onClick={enter}><div className="intro"><button className="enter">Click to continue</button></div></div>
       )}
 
       {open && (
         <div className="detail-wrap" onClick={() => setOpen(null)}>
           <div className="detail" onClick={(e) => e.stopPropagation()}>
-            <h2>{open.item.title}<span className="year">{open.item.year}</span></h2>
-            <p><em>{open.item.summary}</em></p>
-            {open.item.image && !/\.(mp4|webm|mov)$/i.test(open.item.image) && <img src={open.item.image} alt={open.item.title} />}
-            {body.map((p, i) => <p key={i}>{p}</p>)}
-            {open.item.links.map((l) => <div key={l.url}><a href={l.url} target="_blank" rel="noreferrer">{l.label}</a></div>)}
-            <div className="actions">
-              <a href={detailUrl!}>Open page</a>
-              <a href="#close" onClick={(e) => (e.preventDefault(), setOpen(null))}>Close</a>
+            {open.item.image && !/\.(mp4|webm|mov)$/i.test(open.item.image) && (
+              <div className="detail-pic"><img src={open.item.image} alt={open.item.title} /></div>
+            )}
+            <div className="detail-text">
+              <div className="eyebrow">{open.wing.title} · {open.room.title}</div>
+              <h2>{open.item.title}</h2>
+              {open.item.year && <div className="year">{open.item.year}</div>}
+              {open.item.summary && <p className="summary">{open.item.summary}</p>}
+              {body.map((p, i) => <p key={i}>{p}</p>)}
+              <div className="actions">
+                <a className="btn solid" href={detailUrl!}>Open page</a>
+                {open.item.links.map((l) => <a key={l.url} className="btn" href={l.url} target="_blank" rel="noreferrer">{l.label}</a>)}
+                <button className="btn" onClick={() => setOpen(null)}>Close</button>
+              </div>
             </div>
           </div>
         </div>

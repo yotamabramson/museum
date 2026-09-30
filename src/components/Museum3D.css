@@ -1,20 +1,81 @@
-.m3d { position: fixed; inset: 0; background: #0b0a0d; color: #eee; font: 15px/1.4 system-ui, sans-serif; user-select: none; touch-action: none; }
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/cormorant-garamond/500.css';
+@import '@fontsource/cormorant-garamond/600.css';
+@import '@fontsource/cormorant-garamond/500-italic.css';
+
+.m3d {
+  --gold: #c9a55c; --ink: #efe9dd; --muted: #a39a8a;
+  --serif: 'Cormorant Garamond', Georgia, serif; --sans: 'Inter', system-ui, sans-serif;
+  position: fixed; inset: 0; background: #0a0807; color: var(--ink);
+  font: 400 15px/1.5 var(--sans); user-select: none; touch-action: none; -webkit-font-smoothing: antialiased;
+}
 .m3d canvas { display: block; }
-.m3d a { color: #f0c987; }
-.m3d .overlay { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: #000a; cursor: pointer; }
-.m3d .overlay > div { max-width: 26rem; padding: 1rem; }
-.m3d h1 { margin: 0 0 .5rem; font: 600 1.6rem Georgia, serif; }
-.m3d kbd { background: #fff2; border-radius: 4px; padding: 0 .35em; }
-.m3d .where { position: absolute; top: 12px; left: 14px; font: 600 .95rem Georgia, serif; text-shadow: 0 1px 3px #000; pointer-events: none; }
-.m3d .top-right { position: absolute; top: 10px; right: 14px; }
-.m3d .cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #fffb; pointer-events: none; }
-.m3d .hint { position: absolute; bottom: 3vh; left: 50%; transform: translateX(-50%); background: #000b; padding: .5rem .9rem; border-radius: 8px; border: 1px solid #fff3; color: inherit; font: inherit; cursor: pointer; }
-.m3d .detail-wrap { position: absolute; inset: 0; display: grid; place-items: center; background: #000c; padding: 1rem; }
-.m3d .detail { background: #17151a; border: 1px solid #fff2; border-radius: 10px; max-width: 34rem; max-height: 88vh; overflow: auto; padding: 1.25rem 1.5rem; user-select: text; }
-.m3d .detail h2 { margin: 0; font: 600 1.4rem Georgia, serif; }
-.m3d .detail .year { opacity: .6; margin-left: .5rem; font-size: .9rem; }
-.m3d .detail img { max-width: 100%; border-radius: 6px; margin: .75rem 0; }
-.m3d .detail .actions { display: flex; gap: 1rem; margin-top: 1rem; }
+.m3d a { color: inherit; text-decoration: none; }
+.m3d .eyebrow { font: 600 .68rem/1 var(--sans); letter-spacing: .24em; text-transform: uppercase; color: var(--gold); }
+.m3d kbd { display: inline-block; min-width: 1.7em; text-align: center; margin: 0 .12em; padding: .1em .45em; border-radius: 6px; border: 1px solid #ffffff2a; background: #ffffff12; font: 600 .78em var(--sans); }
+
+.m3d .where, .m3d .back {
+  position: absolute; top: 16px; padding: .5rem .95rem; border-radius: 999px;
+  background: #0d0b09aa; border: 1px solid #ffffff1a; backdrop-filter: blur(12px);
+  font: 500 .8rem/1 var(--sans); letter-spacing: .04em; pointer-events: none;
+}
+.m3d .where { left: 16px; font-family: var(--serif); font-size: 1.05rem; font-weight: 600; letter-spacing: .02em; }
+.m3d .back { right: 16px; pointer-events: auto; color: var(--gold); transition: background .2s; }
+.m3d .back:hover { background: #1c1712dd; }
+
+.m3d .cross { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px; border-radius: 50%; border: 1px solid #ffffff66; pointer-events: none; }
+.m3d .cross::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: #fffc; }
+
+.m3d .hint {
+  position: absolute; bottom: 5vh; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: .8rem; cursor: pointer;
+  padding: .7rem 1.2rem; border-radius: 999px; color: inherit;
+  background: #0d0b09cc; border: 1px solid #c9a55c55; backdrop-filter: blur(14px);
+  font: 500 1.05rem var(--serif); animation: pop .25s ease;
+}
+@keyframes pop { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+.m3d .overlay {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center; cursor: pointer;
+  background: radial-gradient(ellipse at center, #0a0807bb 0%, #0a0807f0 75%); backdrop-filter: blur(6px);
+}
+.m3d .intro { max-width: 34rem; padding: 1.5rem; }
+.m3d .intro h1 { font: 500 clamp(2.6rem, 8vw, 4.6rem)/1 var(--serif); margin: 1rem 0 2rem; }
+.m3d .intro h1 em { color: var(--gold); }
+.m3d .enter {
+  cursor: pointer; padding: .9rem 2rem; border-radius: 999px; border: 0;
+  background: var(--gold); color: #1a1408; font: 600 .8rem var(--sans); letter-spacing: .14em; text-transform: uppercase;
+  transition: transform .2s, background .2s;
+}
+.m3d .enter:hover { background: #dcbb75; transform: translateY(-1px); }
+.m3d .keys { margin-top: 1.8rem; color: var(--muted); font-size: .85rem; }
+
+.m3d .detail-wrap { position: absolute; inset: 0; display: grid; place-items: center; padding: 1.25rem; background: #050403cc; backdrop-filter: blur(8px); }
+.m3d .detail {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); max-width: 60rem; max-height: 88vh; overflow: auto;
+  background: #16130f; border: 1px solid #ffffff17; border-radius: 16px; box-shadow: 0 40px 100px #000; user-select: text;
+}
+.m3d .detail:not(:has(.detail-pic)) { grid-template-columns: 1fr; max-width: 34rem; }
+.m3d .detail-pic { display: grid; place-items: center; padding: 1.75rem; background: #0e0c0a; }
+.m3d .detail-pic img { max-width: 100%; max-height: 70vh; padding: 10px; background: #efe9dd; border: 10px solid #b08d4a; box-sizing: content-box; }
+.m3d .detail-text { padding: 2rem 2rem 1.75rem; }
+.m3d .detail h2 { font: 500 2.5rem/1.05 var(--serif); margin: .7rem 0 .3rem; }
+.m3d .detail .year { font: italic 500 1.1rem var(--serif); color: var(--gold); }
+.m3d .detail .summary { font: 500 1.3rem/1.35 var(--serif); margin: 1.1rem 0; }
+.m3d .detail p { color: #cfc7b8; margin: 0 0 .9rem; }
+.m3d .actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.4rem; }
+.m3d .btn {
+  cursor: pointer; padding: .55rem 1.05rem; border-radius: 999px; border: 1px solid #c9a55c44; background: none; color: var(--gold);
+  font: 600 .72rem var(--sans); letter-spacing: .1em; text-transform: uppercase; transition: background .2s, color .2s;
+}
+.m3d .btn:hover { background: var(--gold); color: #1a1408; }
+.m3d .btn.solid { background: var(--gold); color: #1a1408; }
+
 .m3d .stick { position: absolute; left: 0; bottom: 0; width: 50%; height: 45%; }
 .m3d .look { position: absolute; right: 0; bottom: 0; width: 50%; height: 100%; }
-.m3d .knob { position: absolute; width: 90px; height: 90px; margin: -45px; border-radius: 50%; border: 2px solid #fff5; background: #fff1; pointer-events: none; }
+.m3d .knob { position: absolute; width: 90px; height: 90px; margin: -45px; border-radius: 50%; border: 2px solid #ffffff55; background: #ffffff14; pointer-events: none; }
+
+@media (max-width: 720px) {
+  .m3d .detail { grid-template-columns: 1fr; }
+}

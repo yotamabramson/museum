@@ -1,33 +1,51 @@
 ---
 import Base from '../../../layouts/Base.astro';
-import { wings } from '../../../data/museum';
+import { pictureOf, tint, wings } from '../../../data/museum';
 
 export function getStaticPaths() {
   return wings.flatMap((wing) =>
     wing.rooms.flatMap((room) =>
-      room.items.map((item) => ({
+      room.items.map((item, i) => ({
         params: { wing: wing.slug, room: room.slug, item: item.slug },
-        props: { wing, room, item },
+        props: { wing, room, item, prev: room.items[i - 1], next: room.items[i + 1] },
       })),
     ),
   );
 }
-const { wing, room, item } = Astro.props;
+const { wing, room, item, prev, next } = Astro.props;
+const pic = pictureOf(item);
 const paragraphs = item.body.split(/\n{2,}/).filter(Boolean);
+const base = `/${wing.slug}/${room.slug}`;
 ---
 
-<Base title={`${item.title} — Museum`}>
-  <p class="crumbs">
-    <a href="/">Wings</a> / <a href={`/${wing.slug}/`}>{wing.title}</a> /
-    <a href={`/${wing.slug}/${room.slug}/`}>{room.title}</a> / {item.title}
-  </p>
-  <h1>{item.title} <small>{item.year}</small></h1>
-  <p><em>{item.summary}</em></p>
-  {item.image && <img src={item.image} alt={item.title} />}
-  {paragraphs.map((p) => <p>{p}</p>)}
-  {item.links.length > 0 && (
-    <ul>{item.links.map((l) => <li><a href={l.url}>{l.label}</a></li>)}</ul>
-  )}
-  <p><a href={`/walk/#${wing.slug}/${room.slug}/${item.slug}`}>See it on the wall in 3D →</a></p>
-  {item.tags.length > 0 &&<p class="crumbs">{item.tags.map((t) => `#${t}`).join(' ')}</p>}
+<Base title={`${item.title} — Museum`} description={item.summary || undefined}>
+  <nav class="crumbs">
+    <a href="/">Museum</a><i>/</i><a href={`/${wing.slug}/`}>{wing.title}</a><i>/</i><a href={`${base}/`}>{room.title}</a>
+  </nav>
+  <article class="item">
+    <div class="frame">
+      <div class="mat">
+        {pic ? <img src={pic} alt={item.title} /> : <div class="pic" style={`background:${tint(item.slug)}`}><b>{item.title}</b></div>}
+      </div>
+    </div>
+    <aside class="label">
+      <div class="eyebrow">{wing.title} · {room.title}</div>
+      <h1>{item.title}</h1>
+      {item.year && <div class="yr">{item.year}</div>}
+      {item.summary && <p class="summary">{item.summary}</p>}
+      {paragraphs.length > 0 && <div class="text">{paragraphs.map((p) => <p>{p}</p>)}</div>}
+      <hr />
+      <div class="links">
+        <a class="pill solid" href={`/walk/#${wing.slug}/${room.slug}/${item.slug}`} data-astro-reload>See it on the wall in 3D</a>
+        {item.links.map((l) => <a class="pill" href={l.url} target="_blank" rel="noreferrer">{l.label}</a>)}
+      </div>
+      {item.tags.length > 0 && <div class="tags" style="margin-top:1.2rem">{item.tags.map((t) => <span class="tag">{t}</span>)}</div>}
+      {(prev || next) && (
+        <div class="pager">
+          {prev ? <a href={`${base}/${prev.slug}/`}>← {prev.title}</a> : <span />}
+          {next ? <a href={`${base}/${next.slug}/`}>{next.title} →</a> : <span />}
+        </div>
+      )}
+    </aside>
+  </article>
 </Base>

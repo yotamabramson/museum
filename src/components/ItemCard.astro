@@ -1,0 +1,23 @@
+---
+import { pictureOf, tint, type Item } from '../data/museum';
+interface Props {
+  href: string;
+  item: Item;
+}
+const { href, item } = Astro.props;
+const pic = pictureOf(item);
+---
+
+<a class="art" href={href}>
+  <div class="frame">
+    <div class="mat">
+      <div class="pic" style={`background:${pic ? `url(${pic}) center/cover` : tint(item.slug)}`}>
+        {!pic && <b>{item.title}</b>}
+      </div>
+    </div>
+  </div>
+  <figcaption>
+    <h3>{item.title}</h3>
+    {item.year && <div class="yr">{item.year}</div>}
+  </figcaption>
+</a>

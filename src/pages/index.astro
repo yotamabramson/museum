@@ -1,20 +1,36 @@
 ---
 import Base from '../layouts/Base.astro';
-import { wings } from '../data/museum';
+import { bg, itemCount, plural, wingCover, wings } from '../data/museum';
 ---
 
 <Base title="Museum of Things I Made">
-  <p><a href="/walk/">Walk through the museum in 3D →</a></p>
-  <h1>Wings</h1>
-  {wings.length === 0 && <p>The museum is empty. Run <code>npm run admin</code> to add exhibits.</p>}
-  <ul class="cards">
+  <section class="hero">
+    <div class="eyebrow">A private collection</div>
+    <h1>The Museum of <em>Things</em> I Made</h1>
+    <p>Technologies I built, co-created and lived with — hung on the walls, one wing at a time.</p>
+    <div class="actions">
+      <a class="pill solid" href="/walk/" data-astro-reload>Walk the galleries in 3D</a>
+      <a class="pill" href="#wings">Browse the collection</a>
+    </div>
+  </section>
+
+  <div class="section-title" id="wings">
+    <h2>Wings</h2>
+    <span>{wings.length} {wings.length === 1 ? 'wing' : 'wings'}</span>
+  </div>
+  {wings.length === 0 && <p class="empty">The museum is empty. Run <code>npm run admin</code> to add exhibits.</p>}
+  <div class="grid">
     {
       wings.map((w) => (
-        <li>
-          <a href={`/${w.slug}/`}>{w.title}</a> <small>{w.rooms.length} rooms</small>
-          <div>{w.description}</div>
-        </li>
+        <a class="card" href={`/${w.slug}/`}>
+          <div class="bg" style={`background:${bg(wingCover(w), w.slug)}`} />
+          <div class="body">
+            <h3>{w.title}</h3>
+            <div class="meta">{plural(w.rooms.length, 'room')} · {plural(itemCount(w), 'item')}</div>
+            {w.description && <div class="desc">{w.description}</div>}
+          </div>
+        </a>
       ))
     }
-  </ul>
+  </div>
 </Base>

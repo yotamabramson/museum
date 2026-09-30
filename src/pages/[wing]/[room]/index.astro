@@ -1,5 +1,6 @@
 ---
 import Base from '../../../layouts/Base.astro';
+import ItemCard from '../../../components/ItemCard.astro';
 import { wings } from '../../../data/museum';
 
 export function getStaticPaths() {
@@ -10,18 +11,17 @@ export function getStaticPaths() {
 const { wing, room } = Astro.props;
 ---
 
-<Base title={`${room.title} — Museum`}>
-  <p class="crumbs"><a href="/">Wings</a> / <a href={`/${wing.slug}/`}>{wing.title}</a> / {room.title}</p>
-  <h1>{room.title}</h1>
-  <p>{room.description}</p>
-  <ul class="cards">
-    {
-      room.items.map((i) => (
-        <li>
-          <a href={`/${wing.slug}/${room.slug}/${i.slug}/`}>{i.title}</a> <small>{i.year}</small>
-          <div>{i.summary}</div>
-        </li>
-      ))
-    }
-  </ul>
+<Base title={`${room.title} — Museum`} description={room.description || undefined}>
+  <nav class="crumbs">
+    <a href="/">Museum</a><i>/</i><a href={`/${wing.slug}/`}>{wing.title}</a><i>/</i><span>{room.title}</span>
+  </nav>
+  <div class="intro">
+    <div class="eyebrow">{wing.title}</div>
+    <h1>{room.title}</h1>
+    {room.description && <p>{room.description}</p>}
+  </div>
+  {room.items.length === 0 && <p class="empty">No items in this room yet.</p>}
+  <div class="items">
+    {room.items.map((item) => <ItemCard href={`/${wing.slug}/${room.slug}/${item.slug}/`} item={item} />)}
+  </div>
 </Base>
