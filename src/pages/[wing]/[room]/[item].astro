@@ -28,5 +28,6 @@ const paragraphs = item.body.split(/\n{2,}/).filter(Boolean);
   {item.links.length > 0 && (
     <ul>{item.links.map((l) => <li><a href={l.url}>{l.label}</a></li>)}</ul>
   )}
-  {item.tags.length > 0 && <p class="crumbs">{item.tags.map((t) => `#${t}`).join(' ')}</p>}
+  <p><a href={`/walk/#${wing.slug}/${room.slug}/${item.slug}`}>See it on the wall in 3D →</a></p>
+  {item.tags.length > 0 &&<p class="crumbs">{item.tags.map((t) => `#${t}`).join(' ')}</p>}
 </Base>

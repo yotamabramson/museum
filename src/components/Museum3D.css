@@ -1,0 +1,20 @@
+.m3d { position: fixed; inset: 0; background: #0b0a0d; color: #eee; font: 15px/1.4 system-ui, sans-serif; user-select: none; touch-action: none; }
+.m3d canvas { display: block; }
+.m3d a { color: #f0c987; }
+.m3d .overlay { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: #000a; cursor: pointer; }
+.m3d .overlay > div { max-width: 26rem; padding: 1rem; }
+.m3d h1 { margin: 0 0 .5rem; font: 600 1.6rem Georgia, serif; }
+.m3d kbd { background: #fff2; border-radius: 4px; padding: 0 .35em; }
+.m3d .where { position: absolute; top: 12px; left: 14px; font: 600 .95rem Georgia, serif; text-shadow: 0 1px 3px #000; pointer-events: none; }
+.m3d .top-right { position: absolute; top: 10px; right: 14px; }
+.m3d .cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #fffb; pointer-events: none; }
+.m3d .hint { position: absolute; bottom: 3vh; left: 50%; transform: translateX(-50%); background: #000b; padding: .5rem .9rem; border-radius: 8px; border: 1px solid #fff3; color: inherit; font: inherit; cursor: pointer; }
+.m3d .detail-wrap { position: absolute; inset: 0; display: grid; place-items: center; background: #000c; padding: 1rem; }
+.m3d .detail { background: #17151a; border: 1px solid #fff2; border-radius: 10px; max-width: 34rem; max-height: 88vh; overflow: auto; padding: 1.25rem 1.5rem; user-select: text; }
+.m3d .detail h2 { margin: 0; font: 600 1.4rem Georgia, serif; }
+.m3d .detail .year { opacity: .6; margin-left: .5rem; font-size: .9rem; }
+.m3d .detail img { max-width: 100%; border-radius: 6px; margin: .75rem 0; }
+.m3d .detail .actions { display: flex; gap: 1rem; margin-top: 1rem; }
+.m3d .stick { position: absolute; left: 0; bottom: 0; width: 50%; height: 45%; }
+.m3d .look { position: absolute; right: 0; bottom: 0; width: 50%; height: 100%; }
+.m3d .knob { position: absolute; width: 90px; height: 90px; margin: -45px; border-radius: 50%; border: 2px solid #fff5; background: #fff1; pointer-events: none; }
