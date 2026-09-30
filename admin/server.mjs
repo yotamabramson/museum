@@ -1,13 +1,36 @@
 // Local-only admin for the museum DB. Not deployed. Run: npm run admin
 import { createServer } from 'node:http';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, extname, resolve } from 'node:path';
 import { LEVELS, create, openDb, remove, reorder, root, slugify, tree, update } from '../scripts/db.mjs';
 import { exportMuseum } from '../scripts/export.mjs';
 
 const PORT = Number(process.env.PORT ?? 4000);
-const db = openDb();
+let db = openDb();
+const dbFile = resolve(root, 'data/museum.db');
+// Cancel restores the DB as it was when the editor opened (or when last baked) and removes images uploaded since.
+const snapshot = resolve(tmpdir(), `museum-session-${process.pid}.db`);
+let uploads = [];
+const takeSnapshot = () => {
+  copyFileSync(dbFile, snapshot);
+  uploads = [];
+};
+takeSnapshot();
+
+const shutdown = () => {
+  rmSync(snapshot, { force: true });
+  setTimeout(() => process.exit(0), 100);
+};
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 const page = resolve(root, 'admin/index.html');
+
+const MIME = {
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif',
+  '.webp': 'image/webp', '.avif': 'image/avif', '.svg': 'image/svg+xml',
+  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
+};
 
 const readBody = (req) =>
   new Promise((res, rej) => {
@@ -30,11 +53,38 @@ createServer(async (req, res) => {
       res.writeHead(200, { 'content-type': 'text/html' });
       return res.end(readFileSync(page));
     }
+    if (req.method === 'GET' && parts[0] === 'media' && parts.length === 2) {
+      const file = resolve(root, 'media', basename(decodeURIComponent(parts[1])));
+      try {
+        const data = readFileSync(file);
+        res.writeHead(200, { 'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream' });
+        return res.end(data);
+      } catch {
+        return json(res, 404, { error: 'not found' });
+      }
+    }
     if (parts[0] !== 'api') return json(res, 404, { error: 'not found' });
 
     if (req.method === 'GET' && parts[1] === 'tree') return json(res, 200, tree(db));
 
-    if (req.method === 'POST' && parts[1] === 'publish') return json(res, 200, exportMuseum());
+    if (req.method === 'POST' && parts[1] === 'bake') {
+      const counts = exportMuseum();
+      takeSnapshot(); // the baked state is the new baseline for Cancel
+      return json(res, 200, counts);
+    }
+
+    if (req.method === 'POST' && parts[1] === 'cancel') {
+      db.close();
+      copyFileSync(snapshot, dbFile);
+      for (const f of uploads) rmSync(resolve(root, 'media', f), { force: true });
+      json(res, 200, { ok: true, discardedUploads: uploads.length });
+      return shutdown();
+    }
+
+    if (req.method === 'POST' && parts[1] === 'quit') {
+      json(res, 200, { ok: true });
+      return shutdown();
+    }
 
     if (req.method === 'POST' && parts[1] === 'upload') {
       const name = slugify(basename(url.searchParams.get('name') ?? 'file').replace(/\.[^.]+$/, ''));
@@ -42,6 +92,7 @@ createServer(async (req, res) => {
       mkdirSync(resolve(root, 'media'), { recursive: true });
       const file = `${name}-${Date.now().toString(36)}${ext}`;
       writeFileSync(resolve(root, 'media', file), await readBody(req));
+      uploads.push(file);
       return json(res, 200, { path: `/media/${file}` });
     }
 

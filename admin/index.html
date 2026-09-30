@@ -25,7 +25,8 @@
 <nav>
   <div id="top">
     <button id="addWing">+ Wing</button>
-    <button id="publish">Publish (export)</button>
+    <button id="bake" title="Write the export for the site. Does not commit or push.">Bake</button>
+    <button id="cancel" title="Discard everything changed since the editor opened (or last bake) and close">Cancel</button>
   </div>
   <div id="tree"></div>
 </nav>
@@ -127,6 +128,9 @@ function renderForm() {
         const f0 = file.files[0]; if (!f0) return;
         const r = await fetch('/api/upload?name=' + encodeURIComponent(f0.name), { method: 'POST', body: f0 });
         const j = await r.json(); input.value = j.path; prev.src = j.path;
+        // Persist right away so a chosen image can't be lost by forgetting to press Save.
+        await api('PUT', `${sel.level}/${sel.id}`, { image: j.path });
+        obj.image = j.path; note('Image uploaded and saved');
       };
       form.append(file, prev);
     }
@@ -148,9 +152,14 @@ $('#addWing').onclick = async () => {
   const title = prompt('Wing title?'); if (!title) return;
   const { id } = await api('POST', 'wings', { title }); sel = { level: 'wings', id }; load();
 };
-$('#publish').onclick = async () => {
-  const c = await api('POST', 'publish');
-  alert(`Exported ${c.wings} wings, ${c.rooms} rooms, ${c.items} items.\nNow commit and push to deploy.`);
+$('#bake').onclick = async () => {
+  const c = await api('POST', 'bake');
+  alert(`Baked ${c.wings} wings, ${c.rooms} rooms, ${c.items} items.\nNothing was committed or pushed.`);
+};
+$('#cancel').onclick = async () => {
+  if (!confirm('Discard all changes since the editor opened (or last bake) and close the editor?')) return;
+  await api('POST', 'cancel');
+  document.body.innerHTML = '<p style="padding:2rem">Changes discarded. The editor has stopped; you can close this tab.</p>';
 };
 load();
 </script>

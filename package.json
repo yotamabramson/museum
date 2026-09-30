@@ -12,7 +12,8 @@
     "astro": "astro",
     "admin": "node admin/server.mjs",
     "export": "node scripts/export.mjs",
-    "seed": "node scripts/seed.mjs"
+    "seed": "node scripts/seed.mjs",
+    "view": "astro build && astro preview"
   },
   "dependencies": {
     "@astrojs/react": "^7.0.0",

@@ -30,6 +30,30 @@
           ]
         }
       ]
+    },
+    {
+      "slug": "early-days",
+      "title": "Early Days",
+      "description": "My early career after TAU graduation",
+      "rooms": [
+        {
+          "slug": "paradigm-geophysical",
+          "title": "Paradigm Geophysical",
+          "description": "Back in the nineties, this was my first programming job after graduating TAU CS/Math. Paradigm Geophysical (today AspenTech) was a Scitex-spinoff startup focused on using graphic technology for the oil and gas exploration industry. I programmed advanced 3D graphics tools in C++, eventually managing a small team and exploring exotic oil drilling areas globally. The product involved complex algorithms for 3D subsurface structure reconstruction.",
+          "items": [
+            {
+              "slug": "solidgeo",
+              "title": "SolidGeo",
+              "year": "1997",
+              "summary": "",
+              "body": "",
+              "image": "/media/1-muns4pwn.jpeg",
+              "links": [],
+              "tags": []
+            }
+          ]
+        }
+      ]
     }
   ]
 }
