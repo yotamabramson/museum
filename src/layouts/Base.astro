@@ -1,0 +1,31 @@
+---
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header><a href="/">Museum of Things I Made</a></header>
+    <main><slot /></main>
+    <style is:global>
+      :root { color-scheme: light dark; font: 17px/1.55 Georgia, serif; }
+      body { max-width: 46rem; margin: 0 auto; padding: 1rem; }
+      header { padding: 0.5rem 0 1.5rem; font-variant: small-caps; letter-spacing: 0.05em; }
+      a { color: inherit; }
+      .crumbs { opacity: 0.6; font-size: 0.85em; }
+      ul.cards { list-style: none; padding: 0; display: grid; gap: 0.75rem; }
+      ul.cards li { border: 1px solid #8886; padding: 0.75rem 1rem; }
+      ul.cards small { opacity: 0.6; }
+      main img { max-width: 100%; }
+    </style>
+  </body>
+</html>

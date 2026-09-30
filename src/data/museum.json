@@ -1,0 +1,35 @@
+{
+  "wings": [
+    {
+      "slug": "web",
+      "title": "Web",
+      "description": "Things that lived in a browser.",
+      "rooms": [
+        {
+          "slug": "early-days",
+          "title": "Early Days",
+          "description": "Where it started.",
+          "items": [
+            {
+              "slug": "sample-exhibit",
+              "title": "Sample Exhibit",
+              "year": "2005",
+              "summary": "A placeholder exhibit.",
+              "body": "Replace me with something real via `npm run admin`.",
+              "image": "",
+              "links": [
+                {
+                  "label": "Astro",
+                  "url": "https://astro.build"
+                }
+              ],
+              "tags": [
+                "sample"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

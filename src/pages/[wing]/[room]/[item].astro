@@ -1,0 +1,32 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { wings } from '../../../data/museum';
+
+export function getStaticPaths() {
+  return wings.flatMap((wing) =>
+    wing.rooms.flatMap((room) =>
+      room.items.map((item) => ({
+        params: { wing: wing.slug, room: room.slug, item: item.slug },
+        props: { wing, room, item },
+      })),
+    ),
+  );
+}
+const { wing, room, item } = Astro.props;
+const paragraphs = item.body.split(/\n{2,}/).filter(Boolean);
+---
+
+<Base title={`${item.title} — Museum`}>
+  <p class="crumbs">
+    <a href="/">Wings</a> / <a href={`/${wing.slug}/`}>{wing.title}</a> /
+    <a href={`/${wing.slug}/${room.slug}/`}>{room.title}</a> / {item.title}
+  </p>
+  <h1>{item.title} <small>{item.year}</small></h1>
+  <p><em>{item.summary}</em></p>
+  {item.image && <img src={item.image} alt={item.title} />}
+  {paragraphs.map((p) => <p>{p}</p>)}
+  {item.links.length > 0 && (
+    <ul>{item.links.map((l) => <li><a href={l.url}>{l.label}</a></li>)}</ul>
+  )}
+  {item.tags.length > 0 && <p class="crumbs">{item.tags.map((t) => `#${t}`).join(' ')}</p>}
+</Base>

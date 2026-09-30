@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8" />
+<title>Museum admin</title>
+<style>
+  :root { color-scheme: light dark; font: 14px/1.4 system-ui, sans-serif; }
+  body { margin: 0; display: grid; grid-template-columns: 340px 1fr; height: 100vh; }
+  nav { overflow: auto; border-right: 1px solid #8884; padding: 12px; }
+  main { overflow: auto; padding: 20px; max-width: 720px; }
+  ul { list-style: none; margin: 0; padding-left: 14px; }
+  nav > ul { padding: 0; }
+  li > .row { display: flex; gap: 4px; align-items: center; padding: 2px 4px; border-radius: 4px; }
+  .row.sel { background: #48f3; }
+  .row button.name { flex: 1; text-align: left; background: none; border: 0; cursor: pointer; color: inherit; font: inherit; }
+  .row button.mini { opacity: .5; border: 0; background: none; cursor: pointer; color: inherit; }
+  .row button.mini:hover { opacity: 1; }
+  label { display: block; margin: 12px 0 4px; font-weight: 600; }
+  input, textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 6px; }
+  textarea { min-height: 90px; }
+  .bar { display: flex; gap: 8px; margin-top: 16px; }
+  #top { display: flex; gap: 8px; margin-bottom: 12px; }
+  #msg { margin-left: 8px; opacity: .7; }
+  img.preview { max-width: 240px; display: block; margin-top: 8px; }
+</style>
+<nav>
+  <div id="top">
+    <button id="addWing">+ Wing</button>
+    <button id="publish">Publish (export)</button>
+  </div>
+  <div id="tree"></div>
+</nav>
+<main><p>Select something on the left, or add a wing.</p></main>
+<script type="module">
+const $ = (s) => document.querySelector(s);
+let data = [];
+let sel = null; // { level, id }
+const FIELDS = {
+  wings: [['title', 'input'], ['description', 'textarea']],
+  rooms: [['title', 'input'], ['description', 'textarea']],
+  items: [['title', 'input'], ['year', 'input'], ['summary', 'input'], ['body', 'textarea'], ['image', 'image'], ['tags', 'tags'], ['links', 'links']],
+};
+const CHILD = { wings: ['rooms', 'wing_id'], rooms: ['items', 'room_id'] };
+
+const api = async (method, path, body) => {
+  const r = await fetch('/api/' + path, { method, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json();
+  if (!r.ok) { alert(j.error); throw new Error(j.error); }
+  return j;
+};
+const note = (t) => { $('#msg') && ($('#msg').textContent = t); };
+
+async function load() { data = await api('GET', 'tree'); renderTree(); renderForm(); }
+
+function find(level, id) {
+  for (const w of data) {
+    if (level === 'wings' && w.id === id) return w;
+    for (const r of w.rooms) {
+      if (level === 'rooms' && r.id === id) return r;
+      for (const i of r.items) if (level === 'items' && i.id === id) return i;
+    }
+  }
+}
+
+function renderTree() {
+  const el = document.createElement('ul');
+  const node = (level, obj, kids) => {
+    const li = document.createElement('li');
+    const row = document.createElement('div');
+    row.className = 'row' + (sel?.level === level && sel.id === obj.id ? ' sel' : '');
+    const name = Object.assign(document.createElement('button'), { className: 'name', textContent: obj.title });
+    name.onclick = () => { sel = { level, id: obj.id }; renderTree(); renderForm(); };
+    row.append(name);
+    const btn = (t, title, fn) => { const b = Object.assign(document.createElement('button'), { className: 'mini', textContent: t, title }); b.onclick = fn; row.append(b); };
+    if (CHILD[level]) btn('+', 'Add ' + CHILD[level][0].slice(0, -1), async () => {
+      const title = prompt('Title?'); if (!title) return;
+      const { id } = await api('POST', CHILD[level][0], { title, [CHILD[level][1]]: obj.id });
+      sel = { level: CHILD[level][0], id }; load();
+    });
+    btn('↑', 'Move up', () => move(level, obj, -1));
+    btn('↓', 'Move down', () => move(level, obj, 1));
+    btn('✕', 'Delete', async () => {
+      const n = kids ? ` and everything inside it (${kids.length} direct children)` : '';
+      if (!confirm(`Delete “${obj.title}”${n}?`)) return;
+      await api('DELETE', `${level}/${obj.id}`); if (sel?.id === obj.id && sel.level === level) sel = null; load();
+    });
+    li.append(row);
+    if (kids?.length) { const ul = document.createElement('ul'); kids.forEach((k) => ul.append(k)); li.append(ul); }
+    return li;
+  };
+  for (const w of data)
+    el.append(node('wings', w, w.rooms.map((r) => node('rooms', r, r.items.map((i) => node('items', i))))));
+  $('#tree').replaceChildren(el);
+}
+
+async function move(level, obj, dir) {
+  const siblings = level === 'wings' ? data
+    : level === 'rooms' ? data.find((w) => w.id === obj.wing_id).rooms
+    : data.flatMap((w) => w.rooms).find((r) => r.id === obj.room_id).items;
+  const ids = siblings.map((s) => s.id), i = ids.indexOf(obj.id), j = i + dir;
+  if (j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  await api('POST', `${level}/reorder`, { ids }); load();
+}
+
+function renderForm() {
+  const main = $('main');
+  if (!sel) { main.innerHTML = '<p>Select something on the left, or add a wing.</p>'; return; }
+  const obj = find(sel.level, sel.id);
+  if (!obj) { main.innerHTML = ''; return; }
+  const form = document.createElement('form');
+  form.innerHTML = `<h2>${sel.level.slice(0, -1)}: ${obj.title.replace(/</g, '&lt;')}</h2><small>slug: ${obj.slug}</small>`;
+  for (const [f, kind] of FIELDS[sel.level]) {
+    const label = Object.assign(document.createElement('label'), { textContent: f });
+    let input;
+    if (kind === 'textarea') input = document.createElement('textarea');
+    else if (kind === 'links') { input = document.createElement('textarea'); label.textContent = 'links (one per line: label | url)'; }
+    else if (kind === 'tags') { input = document.createElement('input'); label.textContent = 'tags (comma separated)'; }
+    else input = document.createElement('input');
+    input.name = f;
+    input.value = kind === 'links' ? obj.links.map((l) => `${l.label} | ${l.url}`).join('\n')
+      : kind === 'tags' ? obj.tags.join(', ') : obj[f] ?? '';
+    form.append(label, input);
+    if (kind === 'image') {
+      const file = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*,video/*' });
+      const prev = Object.assign(document.createElement('img'), { className: 'preview', src: obj.image || '' });
+      file.onchange = async () => {
+        const f0 = file.files[0]; if (!f0) return;
+        const r = await fetch('/api/upload?name=' + encodeURIComponent(f0.name), { method: 'POST', body: f0 });
+        const j = await r.json(); input.value = j.path; prev.src = j.path;
+      };
+      form.append(file, prev);
+    }
+  }
+  const bar = document.createElement('div'); bar.className = 'bar';
+  bar.innerHTML = '<button type="submit">Save</button><span id="msg"></span>';
+  form.append(bar);
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(form));
+    if ('links' in fd) fd.links = fd.links.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const [label, ...u] = l.split('|'); return u.length ? { label: label.trim(), url: u.join('|').trim() } : { label: l, url: l }; });
+    if ('tags' in fd) fd.tags = fd.tags.split(',').map((t) => t.trim()).filter(Boolean);
+    await api('PUT', `${sel.level}/${sel.id}`, fd); await load(); note('Saved');
+  };
+  main.replaceChildren(form);
+}
+
+$('#addWing').onclick = async () => {
+  const title = prompt('Wing title?'); if (!title) return;
+  const { id } = await api('POST', 'wings', { title }); sel = { level: 'wings', id }; load();
+};
+$('#publish').onclick = async () => {
+  const c = await api('POST', 'publish');
+  alert(`Exported ${c.wings} wings, ${c.rooms} rooms, ${c.items} items.\nNow commit and push to deploy.`);
+};
+load();
+</script>
+</html>

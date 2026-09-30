@@ -1,0 +1,25 @@
+---
+import Base from '../../layouts/Base.astro';
+import { wings } from '../../data/museum';
+
+export function getStaticPaths() {
+  return wings.map((wing) => ({ params: { wing: wing.slug }, props: { wing } }));
+}
+const { wing } = Astro.props;
+---
+
+<Base title={`${wing.title} — Museum`}>
+  <p class="crumbs"><a href="/">Wings</a> / {wing.title}</p>
+  <h1>{wing.title}</h1>
+  <p>{wing.description}</p>
+  <ul class="cards">
+    {
+      wing.rooms.map((r) => (
+        <li>
+          <a href={`/${wing.slug}/${r.slug}/`}>{r.title}</a> <small>{r.items.length} items</small>
+          <div>{r.description}</div>
+        </li>
+      ))
+    }
+  </ul>
+</Base>

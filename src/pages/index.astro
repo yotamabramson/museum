@@ -1,0 +1,19 @@
+---
+import Base from '../layouts/Base.astro';
+import { wings } from '../data/museum';
+---
+
+<Base title="Museum of Things I Made">
+  <h1>Wings</h1>
+  {wings.length === 0 && <p>The museum is empty. Run <code>npm run admin</code> to add exhibits.</p>}
+  <ul class="cards">
+    {
+      wings.map((w) => (
+        <li>
+          <a href={`/${w.slug}/`}>{w.title}</a> <small>{w.rooms.length} rooms</small>
+          <div>{w.description}</div>
+        </li>
+      ))
+    }
+  </ul>
+</Base>
