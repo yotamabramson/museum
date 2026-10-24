@@ -1,37 +1,6 @@
 {
   "wings": [
     {
-      "slug": "web",
-      "title": "Web",
-      "description": "Things that lived in a browser.",
-      "rooms": [
-        {
-          "slug": "early-days",
-          "title": "Early Days",
-          "description": "Where it started.",
-          "items": [
-            {
-              "slug": "sample-exhibit",
-              "title": "Sample Exhibit",
-              "year": "2005",
-              "summary": "A placeholder exhibit.",
-              "body": "Replace me with something real via `npm run admin`.",
-              "image": "",
-              "links": [
-                {
-                  "label": "Astro",
-                  "url": "https://astro.build"
-                }
-              ],
-              "tags": [
-                "sample"
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
       "slug": "early-days",
       "title": "Early Days",
       "description": "My early career after TAU graduation",
@@ -82,6 +51,133 @@
               "tags": []
             }
           ]
+        },
+        {
+          "slug": "decentanswer",
+          "title": "DecentAnswer",
+          "description": "My startup from the dot com era. Raised $300K from Joshua Levinberg. Had 8 employees in Ramat Hahayal (Walenberg 14). Closed after a year.",
+          "items": [
+            {
+              "slug": "the-sign",
+              "title": "The sign",
+              "year": "2000",
+              "summary": "I bought a fancy sign for the office",
+              "body": "That's me near the sign. A 30yo enterpreneur.",
+              "image": "/media/unnamed-mvms3098.jpg",
+              "links": [],
+              "tags": []
+            },
+            {
+              "slug": "executive-summary",
+              "title": "Executive Summary",
+              "year": "2000",
+              "summary": "The beginning of the Executive document",
+              "body": "",
+              "image": "/media/whatsapp-image-2026-10-24-at-22-30-30-mvmspk34.jpeg",
+              "links": [],
+              "tags": []
+            }
+          ]
+        },
+        {
+          "slug": "spearhead-security",
+          "title": "Spearhead Security",
+          "description": "",
+          "items": []
+        }
+      ]
+    },
+    {
+      "slug": "transportation",
+      "title": "Transportation",
+      "description": "",
+      "rooms": [
+        {
+          "slug": "ecole-des-mines-de-paris",
+          "title": "Ecole des Mines de Paris",
+          "description": "",
+          "items": []
+        },
+        {
+          "slug": "technion",
+          "title": "Technion",
+          "description": "",
+          "items": []
+        },
+        {
+          "slug": "silicon-traffic",
+          "title": "Silicon Traffic",
+          "description": "",
+          "items": []
+        },
+        {
+          "slug": "philips",
+          "title": "Philips",
+          "description": "",
+          "items": []
+        }
+      ]
+    },
+    {
+      "slug": "startup-years",
+      "title": "Startup years",
+      "description": "",
+      "rooms": [
+        {
+          "slug": "small-ventures",
+          "title": "Small Ventures",
+          "description": "",
+          "items": []
+        },
+        {
+          "slug": "siliconimage",
+          "title": "SiliconImage",
+          "description": "",
+          "items": []
+        },
+        {
+          "slug": "teamalaya",
+          "title": "Teamalaya",
+          "description": "",
+          "items": []
+        }
+      ]
+    },
+    {
+      "slug": "bigtech",
+      "title": "BigTech",
+      "description": "",
+      "rooms": [
+        {
+          "slug": "samsung",
+          "title": "Samsung",
+          "description": "",
+          "items": []
+        },
+        {
+          "slug": "taboola",
+          "title": "Taboola",
+          "description": "",
+          "items": []
+        }
+      ]
+    },
+    {
+      "slug": "post-taboola",
+      "title": "Post-Taboola",
+      "description": "",
+      "rooms": [
+        {
+          "slug": "curvetech",
+          "title": "CurveTech",
+          "description": "",
+          "items": []
+        },
+        {
+          "slug": "valmont",
+          "title": "Valmont",
+          "description": "",
+          "items": []
         }
       ]
     }
